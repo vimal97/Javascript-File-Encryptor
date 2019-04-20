@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>JavaScript File Encryption App</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link href="http://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet" />
+		<link href="assets/css/style.css" rel="stylesheet" />
+		<script src="./Big Integer Calculator - Arbitrary Precision Arithmetic_files/osd.js"></script><script src="./Big Integer Calculator - Arbitrary Precision Arithmetic_files/ca-pub-5507865760857847.js"></script><script type="text/javascript" src="./Big Integer Calculator - Arbitrary Precision Arithmetic_files/BigInt.js"> 
+		</script>
+		<!-- <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script> -->
+		<script type="text/javascript" src="./Big Integer Calculator - Arbitrary Precision Arithmetic_files/bistro.js"> 
+		</script>
+		
+		<script type="text/javascript" src="./Big Integer Calculator - Arbitrary Precision Arithmetic_files/keyevents.js"> 
+		</script>
+	</head>
+	<body>
+		<a class="back"></a>
+		<div id="login" style="margin-top:10%">
+			<p style='text-align: center'><input type="text" id="uname_l" style="padding:10px;" placeholder="Username.."></p><br>
+			<p style='text-align: center'><input type="password" id="pass_l" style="padding:10px;" placeholder="Password.."></p><br>
+			<p style='text-align: center'><input type="button" value="SUBMIT" onclick="login()"><input onclick="document.getElementById('login').style.display='none';document.getElementById('signup').style.display='block';" type="button" value="SIGNUP"></p>
+		</div>
+		<div id="signup" style="display: none;margin-top:10%">
+				<p style='text-align: center'><input type="text" id="uname_s" style="padding:10px;" placeholder="Username.."></p><br>
+				<p style='text-align: center'><input type="password" id="pass_s" style="padding:10px;" placeholder="Password.."></p><br>
+				<p style='text-align: center'><input type="password" id="cpass_s" style="padding:10px;" placeholder="Confirm Pass.."></p><br>
+				<p style='text-align: center'><input type="button" value="SUBMIT" onclick="signup()"><input onclick="document.getElementById('signup').style.display='none';document.getElementById('login').style.display='block';" type="button" value="LOGIN"></p>
+		</div>
+		<div id="stage" style="display: none;">
+			<div id="step1">
+				<div class="content">
+					<h1>What do you want to do?</h1>
+					<a class="button encrypt green">Encrypt a file</a>
+					<a class="button decrypt magenta">Decrypt a file</a>
+				</div>
+			</div>
+			<div id="step2">
+				<div class="content if-encrypt">
+					<h1>Choose which file to encrypt</h1>
+					<a class="button browse blue">Browse</a>
+					<input type="file" id="encrypt-input" />
+				</div>
+				<div class="content if-decrypt">
+					<h1>Choose which file to decrypt</h1>
+					<a class="button browse blue">Browse</a>
+					<input type="file" id="decrypt-input" />
+				</div>
+			</div>
+			<div id="step3">
+				<div class="content if-encrypt">
+					<a class="button process red">Encrypt!</a>
+				</div>
+				<div class="content if-decrypt">
+					<a class="button process red">Decrypt!</a>
+				</div>
+			</div>
+			<div id="step4">
+				<div class="content">
+					<h1>Your file is ready!</h1>
+					<a class="button download green">Download</a>
+				</div>
+			</div>
+		</div>
+	</body>
+
+	<!-- Include the AES algorithm of the crypto library -->
+	<script src="assets/js/aes.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script src="assets/js/script.js"></script>
+	<script>
+		var body = $('body'),
+			stage = $('#stage'),
+			back = $('a.back'),
+			encrypted;
+
+		/* Step 1 */
+
+		$('#step1 .encrypt').click(function(){
+			body.attr('class', 'encrypt');
+
+			// Go to step 2
+			step(2);
+		});
+
+		$('#step1 .decrypt').click(function(){
+			body.attr('class', 'decrypt');
+			step(2);
+		});
+
+
+		/* Step 2 */
+
+
+		$('#step2 .button').click(function(){
+			// Trigger the file browser dialog
+			$(this).parent().find('input').click();
+		});
+
+
+		// Set up events for the file inputs
+
+		var file = null;
+
+		$('#step2').on('change', '#encrypt-input', function(e){
+
+			// Has a file been selected?
+
+			if(e.target.files.length!=1){
+				alert('Please select a file to encrypt!');
+				return false;
+			}
+
+			file = e.target.files[0];
+
+			if(file.size > 1024*1024){
+				alert('Please choose files smaller than 1mb, otherwise you may crash your browser. \nThis is a known issue. See the tutorial.');
+				return;
+			}
+
+			step(3);
+		});
+
+		$('#step2').on('change', '#decrypt-input', function(e){
+
+			if(e.target.files.length!=1){
+				alert('Please select a file to decrypt!');
+				return false;
+			}
+
+			file = e.target.files[0];
+			step(3);
+		});
+
+
+		/* Step 3 */
+
+
+		$('a.button.process').click(function(){
+
+			var a = $('#step4 a.download');
+
+			
+
+			// The HTML5 FileReader object will allow us to read the 
+			// contents of the	selected file.
+
+			var reader = new FileReader();
+
+			if(body.hasClass('encrypt')){
+
+				// Encrypt the file!
+				var password = makeid(10);
+				console.log("Encrypted using : "+password);
+				password_e = rsa_encrypt(password);
+				localStorage.setItem("file",password_e)
+				if(password.length<5){
+					alert('Please choose a longer password!');
+					return;
+				}
+				reader.onload = function(e){
+
+					// Use the CryptoJS library and the AES cypher to encrypt the 
+					// contents of the file, held in e.target.result, with the password
+
+					encrypted = CryptoJS.AES.encrypt(e.target.result, password);
+
+					// The download attribute will cause the contents of the href
+					// attribute to be downloaded when clicked. The download attribute
+					// also holds the name of the file that is offered for download.
+					// var xhr = new XMLHttpRequest();
+					// xhr.open("POST", "http://localhost:8080/file_test", true);
+					// xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+					// xhr.send(encrypted);
+
+					a.attr('href', 'data:application/octet-stream,' + encrypted);
+					a.attr('download', file.name + '.ayush');
+
+					step(4);
+				};
+
+				// This will encode the contents of the file into a data-uri.
+				// It will trigger the onload handler above, with the result
+
+				reader.readAsDataURL(file);
+			}
+			else {
+
+				// Decrypt it!
+
+				reader.onload = function(e){
+					var password = JSON.parse(localStorage.getItem("file"));
+					var password_d = rsa_decrypt(password);
+					console.log("Decrypted using : "+password_d);
+					var decrypted = CryptoJS.AES.decrypt(e.target.result, password_d)
+											.toString(CryptoJS.enc.Latin1);
+
+					if(!/^data:/.test(decrypted)){
+						alert("Invalid pass phrase or file! Please try again.");
+						return false;
+					}
+
+					a.attr('href', decrypted);
+					a.attr('download', file.name.replace('.ayush',''));
+
+					step(4);
+				};
+
+				reader.readAsText(file);
+			}
+		});
+
+
+		/* The back button */
+
+
+		back.click(function(){
+
+			// Reinitialize the hidden file inputs,
+			// so that they don't hold the selection 
+			// from last time
+
+			$('#step2 input[type=file]').replaceWith(function(){
+				return $(this).clone();
+			});
+
+			step(1);
+		});
+
+
+		// Helper function that moves the viewport to the correct step div
+
+		function step(i){
+
+			if(i == 1){
+				back.fadeOut();
+			}
+			else{
+				back.fadeIn();
+			}
+
+			// Move the #stage div. Changing the top property will trigger
+			// a css transition on the element. i-1 because we want the
+			// steps to start from 1:
+
+			stage.css('top',(-(i-1)*100)+'%');
+		}
+
+			var users = JSON.parse(localStorage.getItem('users'));
+
+			function login(){
+				var users = JSON.parse(localStorage.getItem('users'));
+				var uname = document.getElementById('uname_l').value;
+				var pass = document.getElementById('pass_l').value;
+				if(users.uname.indexOf(uname) >= 0){
+					var index = users.uname.indexOf(uname);
+					if(users.pass[index] == pass){
+						localStorage.setItem("currentuser",JSON.stringify({'uname' : uname,'keys' : users.keys[index]}));
+						document.getElementById('login').style.display = "none";
+						document.getElementById('stage').style.display = "block";
+					}
+				}
+				else
+				{
+					console.log("User not found" + users.uname.indexOf(uname));
+				}
+			}
+
+			function signup(){
+				var uname = document.getElementById('uname_s').value;
+				var pass = document.getElementById('pass_s').value;
+				var cpass = document.getElementById('cpass_s').value;
+				if(pass == cpass){
+					var users = JSON.parse(localStorage.getItem('users'));
+					if(users.uname.indexOf(uname)>=0)
+						console.log("User already present");
+					else
+					{
+						users.uname.push(uname);
+						users.pass.push(pass);
+						var keys = generateKeys();
+						users.keys.push(keys);
+						localStorage.setItem('users',JSON.stringify(users));
+						var data = {'private' : keys.private,'n' : keys.n};
+						data = JSON.stringify(data);	
+						
+						var encrypted = CryptoJS.AES.encrypt(data, pass).toString();
+
+						console.log(encrypted);
+
+						var decrypted = CryptoJS.AES.decrypt(encrypted, pass).toString(CryptoJS.enc.Utf8);
+
+						console.log(JSON.parse(decrypted));
+
+					}
+				}
+				else
+					console.log("Pass not matching");
+			}
+
+
+			// RSA Script Starts here.
+
+			function test_prime(n)
+			{
+			if (n===1)
+			{
+				return false;
+			}
+			else if(n === 2)
+			{
+				return true;
+			}else
+			{
+				for(var x = 2; x < n/2; x++)
+				{
+				if(n % x === 0)
+				{
+					return false;
+				}
+				}
+				return true;  
+			}
+			}
+
+			function gcd(x, y) {
+			if ((typeof x !== 'number') || (typeof y !== 'number')) 
+				return false;
+			x = Math.abs(x);
+			y = Math.abs(y);
+			while(y) {
+				var t = y;
+				y = x % y;
+				x = t;
+			}
+			return x;
+			}
+
+			function generateKeys(){
+				var p,q,n,v,e,d = 2,flag = false,rand,i;
+
+				while(!flag){
+					rand = Math.floor(Math.random() * 50);
+					flag = test_prime(rand);
+					if(flag)
+						p = rand;
+				}
+
+				flag = false;
+
+				while(!flag){
+					rand = Math.floor(Math.random() * 50);
+					flag = test_prime(rand);
+					if(flag)
+						q = rand;
+				}
+
+				n = p *q;
+				v = (p-1) * (q-1);
+				for(i=2;i<v;i++)
+				{
+				if(gcd(i,v) == 1)
+				{
+					e = i;
+					break;
+				}
+				}
+				e=7;
+				flag = false;
+				while(true){
+				if((e*d)%v == 1 && (e != d)){
+					break;
+				}
+				else
+					d++;
+				}
+				var keys = {'private':d,'public':e,'n':n};
+				return keys;
+			}
+
+			function makeid(length) {
+			var text = "";
+			var possible = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO";
+
+			for (var i = 0; i < length; i++)
+				text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+			return text;
+			}
+
+			var text = makeid(10);
+			var decrypted = "";
+			var asciis = [];
+
+
+			// // Character array
+			var chars = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z","1","2","3","4","5","6","7","8","9","0"];
+
+			function rsa_encrypt(text)
+			{
+				var encrypted = [];
+				var e = JSON.parse(localStorage.getItem('currentuser')).keys.public;
+				var n1 = JSON.parse(localStorage.getItem('currentuser')).keys.n;
+				console.log("PUBLIC : "+e);
+				for(i=0;i<text.length;i++)
+				{
+				asciis.push(chars.indexOf(text[i]+""));
+				cipher = bi_mod(bi_pow(asciis[i],e),n1);
+				encrypted.push(cipher * 1);
+				}
+				console.log("ASCCIIS : "+asciis);
+				console.log("ENCRYPTED : "+encrypted);
+				return JSON.stringify(encrypted);
+			}
+
+			function rsa_decrypt(encrypted)
+			{
+				var decrypted_array = [];
+				var encrypted = JSON.parse(localStorage.getItem("file"));
+				var d = JSON.parse(localStorage.getItem('currentuser')).keys.private;
+				var n1 = JSON.parse(localStorage.getItem('currentuser')).keys.n;
+				console.log("ENCRYPTED : "+encrypted);
+				console.log("PRIVATE : "+d);
+				for(i=0;i<text.length;i++)
+				{
+					decrypted_array.push(bi_mod(bi_pow(encrypted[i],d),n1) * 1);
+				}
+
+				for(i=0;i<decrypted_array.length;i++)
+				{
+					decrypted += chars[decrypted_array[i]];
+				}
+
+				return decrypted;
+			}
+			// alert("p : "+p+"\nq : "+q+"\nn : "+n+"\nv : "+v+"\nPrivate key : "+"{ "+d+" , "+n+" }"+"\nPublic key : "+"{ "+e+" , "+n+" }"+"\nPlain text : "+text+"\nAscii : "+JSON.stringify(asciis)+"\nEncrypted : "+JSON.stringify(encrypted)+"\nDecrypted : "+JSON.stringify(decrypted_array)+"\nText : "+decrypted);
+
+			// RSA Script Ends here.
+
+	</script>
+
+</html>
