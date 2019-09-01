@@ -247,7 +247,8 @@
 
 			stage.css('top',(-(i-1)*100)+'%');
 		}
-
+			
+			localStorage.setItem("users",JSON.stringify({'uname':[],'pass':[],'keys':[]}))
 			var users = JSON.parse(localStorage.getItem('users'));
 
 			function login(){
