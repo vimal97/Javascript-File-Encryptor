@@ -269,12 +269,14 @@
 			}
 
 			function signup(){
-				localStorage.setItem("users",JSON.stringify({uname:[],pass:[],keys:[]}))
+				localStorage.setItem("users",JSON.stringify({'uname':[],'pass':[],'keys':[]}))
+				console.log(localStorage.getItem("users"));
 				var uname = document.getElementById('uname_s').value;
 				var pass = document.getElementById('pass_s').value;
 				var cpass = document.getElementById('cpass_s').value;
 				if(pass == cpass){
 					var users = JSON.parse(localStorage.getItem('users'));
+					console.log(users)
 					if(users.uname.indexOf(uname)>=0)
 						console.log("User already present");
 					else
@@ -284,6 +286,7 @@
 						var keys = generateKeys();
 						users.keys.push(keys);
 						localStorage.setItem('users',JSON.stringify(users));
+						console.log(localStorage.getItem("users"));
 						var data = {'private' : keys.private,'n' : keys.n};
 						data = JSON.stringify(data);	
 						
