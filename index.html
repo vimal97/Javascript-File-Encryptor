@@ -269,7 +269,7 @@
 			}
 
 			function signup(){
-				localStorage.setItem("users","{uname:[],pass:[],keys:[]}")
+				localStorage.setItem("users",JSON.stringify({uname:[],pass:[],keys:[]}))
 				var uname = document.getElementById('uname_s').value;
 				var pass = document.getElementById('pass_s').value;
 				var cpass = document.getElementById('cpass_s').value;
